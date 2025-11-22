@@ -1,0 +1,27 @@
+
+name: Terraform Validate
+
+on:
+  push:
+    paths:
+      - 'month-**/terraform/**'
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.14
+      - name: Terraform Validate
+        run: |
+          for dir in $(find . -path "*/terraform" -type d); do
+            cd "$dir"
+            terraform init -backend=false
+            terraform validate
+            cd - > /dev/null
+          done
+

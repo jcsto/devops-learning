@@ -1,0 +1,58 @@
+name: Kubernetes Lint
+
+on:
+  push:
+    paths:
+      - 'month-**/kubernetes/**'
+      - 'month-**/helm/**'
+  pull_request:
+    paths:
+      - 'month-**/kubernetes/**'
+      - 'month-**/helm/**'
+
+jobs:
+  kubeval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Download kubeval
+        run: |
+          wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
+          tar xf kubeval-linux-amd64.tar.gz
+          sudo mv kubeval /usr/local/bin/
+      - name: Validate Kubernetes manifests
+        run: |
+          for file in $(find . -name "*.yaml" -o -name "*.yml" | grep kubernetes); do
+            kubeval "$file"
+          done
+        continue-on-error: true
+
+  helm-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: azure/setup-helm@v3
+        with:
+          version: 'v3.12.0'
+      - name: Lint Helm charts
+        run: |
+          for chart in $(find . -name "Chart.yaml" | xargs dirname); do
+            helm lint "$chart"
+          done
+        continue-on-error: true
+
+  kube-score:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Download kube-score
+        run: |
+          wget https://github.com/zegl/kube-score/releases/download/v1.14.0/kube-score_linux_amd64
+          chmod +x kube-score_linux_amd64
+          sudo mv kube-score_linux_amd64 /usr/local/bin/kube-score
+      - name: Score manifests
+        run: |
+          for file in $(find . -name "*.yaml" -o -name "*.yml" | grep kubernetes); do
+            kube-score score "$file"
+          done
+        continue-on-error: true

@@ -1,0 +1,22 @@
+
+name: Docker Build
+
+on:
+  push:
+    paths:
+      - 'month-**/docker/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: docker/setup-buildx-action@v2
+      - name: Build Docker images
+        run: |
+          for dockerfile in $(find . -name "Dockerfile"); do
+            dir=$(dirname "$dockerfile")
+            image_name=$(echo "$dir" | tr '/' '-')
+            docker build -t devops-learning:$image_name $dir
+          done
+
