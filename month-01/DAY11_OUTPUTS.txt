@@ -1,0 +1,36 @@
+alb_arn = "arn:aws:elasticloadbalancing:us-east-1:501080971570:loadbalancer/app/alb-20251126031426415600000002/fd060fb89dc5e854"
+alb_dns_name = "alb-20251126031426415600000002-417639119.us-east-1.elb.amazonaws.com"
+alb_security_group_id = "sg-0a8ab15f10ca5feee"
+ami_id = "ami-0156001f0548e90b1"
+asg_arn = "arn:aws:autoscaling:us-east-1:501080971570:autoScalingGroup:20db41bd-b00c-46e0-b2a3-7fce99b4bc6e:autoScalingGroupName/devops-platform-asg-dev"
+asg_name = "devops-platform-asg-dev"
+availability_zones = tolist([
+  "us-east-1a",
+  "us-east-1b",
+  "us-east-1c",
+  "us-east-1d",
+  "us-east-1e",
+  "us-east-1f",
+])
+db_instance_address = "devops-platform-db-20251126040314138900000001.c6xtsg8szpz6.us-east-1.rds.amazonaws.com"
+db_instance_endpoint = "devops-platform-db-20251126040314138900000001.c6xtsg8szpz6.us-east-1.rds.amazonaws.com:5432"
+db_instance_port = 5432
+db_name = "appdb"
+ec2_security_group_id = "sg-090b37a0ff58c319a"
+lambda_security_group_id = "sg-0647fbb25474f79da"
+launch_template_id = "lt-04501193378564f3a"
+nat_gateway_public_ips = [
+  "98.84.81.66",
+]
+private_subnet_ids = [
+  "subnet-0a6927d560f01c3a4",
+  "subnet-0284816e929e71cdb",
+]
+public_subnet_ids = [
+  "subnet-075490d951a9efebc",
+  "subnet-0eec10e344d0a99d2",
+]
+rds_security_group_id = "sg-0844f48f1f6cf64d4"
+target_group_arn = "arn:aws:elasticloadbalancing:us-east-1:501080971570:targetgroup/tg-20251126031426415600000001/3e8304c04a18440c"
+vpc_cidr = "10.0.0.0/16"
+vpc_id = "vpc-07446ef3c8004a1ac"

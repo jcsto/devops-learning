@@ -52,3 +52,27 @@ variable "tags" {
   default     = {}
 }
 
+
+variable "rds_engine_version" {
+  description = "RDS PostgreSQL engine version"
+  type        = string
+  default     = "16.1"
+}
+
+variable "rds_instance_class" {
+  description = "RDS instance class"
+  type        = string
+  default     = "db.t3.micro"
+}
+
+variable "rds_allocated_storage" {
+  description = "RDS allocated storage"
+  type        = number
+  default     = 20
+}
+
+variable "rds_db_password" {
+  description = "RDS database password"
+  type        = string
+  sensitive   = true
+}

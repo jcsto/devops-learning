@@ -50,6 +50,22 @@ output "lambda_security_group_id" {
   value       = module.security_groups.lambda_security_group_id
 }
 
+# ALB Outputs
+output "alb_dns_name" {
+  description = "ALB DNS name"
+  value       = module.alb.alb_dns_name
+}
+
+output "alb_arn" {
+  description = "ALB ARN"
+  value       = module.alb.alb_arn
+}
+
+output "target_group_arn" {
+  description = "Target Group ARN"
+  value       = module.alb.target_group_arn
+}
+
 # EC2 Outputs
 output "asg_name" {
   description = "Auto Scaling Group name"
@@ -70,3 +86,25 @@ output "ami_id" {
   description = "AMI ID used"
   value       = module.ec2.ami_id
 }
+
+# RDS Outputs
+output "db_instance_endpoint" {
+  description = "RDS Database endpoint"
+  value       = module.rds.db_instance_endpoint
+}
+
+output "db_instance_address" {
+  description = "RDS Database address"
+  value       = module.rds.db_instance_address
+}
+
+output "db_instance_port" {
+  description = "RDS Database port"
+  value       = module.rds.db_instance_port
+}
+
+output "db_name" {
+  description = "RDS Database name"
+  value       = module.rds.db_name
+}
+
