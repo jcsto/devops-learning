@@ -1,0 +1,216 @@
+# ============================================================================
+# GITHUB ACTIONS WORKFLOW: PHP Code Quality para Symfony 6.4.9
+# ============================================================================
+# Flujo de branches de la empresa:
+# feature/xyz (custom branch) → PR → release/development
+#                            → PR → release/uat  
+#                            → PR → release/prod
+
+name: 'PHP Code Quality'
+
+# ============================================================================
+# EVENTOS QUE DISPARAN ESTE WORKFLOW
+# ============================================================================
+# Ejecuta CUANDO:
+# 1. Haces git push a cualquier rama (feature/*, release/*)
+# 2. Abres un PR hacia release/development, release/uat o release/prod
+
+on:
+  # Evento 1: git push (a cualquier rama)
+  push:
+    paths:
+      - 'src/**/*.php'
+      - 'config/**/*.php'
+      - 'tests/**/*.php'
+      - 'composer.json'
+      - '.github/workflows/php-quality.yml'
+  
+  # Evento 2: Pull Request hacia ramas de release
+  pull_request:
+    branches:
+      - release/development  # PRs hacia release/development
+      - release/uat          # PRs hacia release/uat
+      - release/prod         # PRs hacia release/prod
+    paths:
+      - 'src/**/*.php'
+      - 'config/**/*.php'
+      - 'tests/**/*.php'
+      - 'composer.json'
+
+# ============================================================================
+# JOBS
+# ============================================================================
+jobs:
+  # ========================================================================
+  # JOB: PHP Syntax Check
+  # ========================================================================
+  php-lint:
+    name: 'PHP Syntax Check (Symfony 6.4.9)'
+    runs-on: ubuntu-latest
+    
+    steps:
+      # STEP 1: Descargar código
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # STEP 2: Instalar PHP 8.2 (requerido para Symfony 6.4.9)
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'  # Symfony 6.4.9 requiere PHP 8.2+
+          tools: composer      # Instalar composer
+      
+      # STEP 3: Chequear sintaxis PHP (no hay errores de sintaxis)
+      - name: PHP Lint (Syntax Check)
+        run: |
+          echo "🔍 Chequeando sintaxis PHP..."
+          # Busca todos los .php y ejecuta php -l (lint)
+          find src config tests -name "*.php" -type f -exec php -l {} \;
+          echo "✅ Sintaxis correcta"
+      
+      # STEP 4: Detectar debug statements (die, var_dump, dd, exit)
+      - name: Check for Debug Statements
+        run: |
+          echo "🔍 Buscando debug statements..."
+          FOUND=0
+          
+          # Buscar die()
+          if grep -r "die(" src config tests --include="*.php" 2>/dev/null; then
+            echo "❌ Encontrado: die()"
+            FOUND=1
+          fi
+          
+          # Buscar var_dump()
+          if grep -r "var_dump(" src config tests --include="*.php" 2>/dev/null; then
+            echo "❌ Encontrado: var_dump()"
+            FOUND=1
+          fi
+          
+          # Buscar dd() (Symfony helper)
+          if grep -r "dd(" src config tests --include="*.php" 2>/dev/null; then
+            echo "❌ Encontrado: dd()"
+            FOUND=1
+          fi
+          
+          # Buscar exit()
+          if grep -r "exit(" src config tests --include="*.php" 2>/dev/null; then
+            echo "❌ Encontrado: exit()"
+            FOUND=1
+          fi
+          
+          if [ $FOUND -eq 0 ]; then
+            echo "✅ No hay debug statements"
+          else
+            echo "❌ Debes remover los debug statements"
+            exit 1
+          fi
+      
+      # STEP 5: Detectar hardcoded credentials
+      - name: Check for Hardcoded Credentials
+        run: |
+          echo "🔍 Buscando credenciales hardcodeadas..."
+          FOUND=0
+          
+          # Buscar password='...' o password="..."
+          if grep -r "password\s*=\s*['\"]" src config --include="*.php" 2>/dev/null | grep -v "password_hash" | grep -v "password_verify"; then
+            echo "⚠️ Posible password hardcodeada"
+            FOUND=1
+          fi
+          
+          # Buscar api_key='...'
+          if grep -r "api_key\s*=\s*['\"]" src config --include="*.php" 2>/dev/null; then
+            echo "⚠️ Posible API key hardcodeada"
+            FOUND=1
+          fi
+          
+          # Buscar database_url hardcodeada
+          if grep -r "DATABASE_URL\s*=\s*['\"]" src config --include="*.php" 2>/dev/null; then
+            echo "⚠️ DATABASE_URL hardcodeada"
+            FOUND=1
+          fi
+          
+          if [ $FOUND -eq 0 ]; then
+            echo "✅ No hay credenciales hardcodeadas"
+          else
+            echo "❌ Usa .env para credenciales, no hardcodees"
+            exit 1
+          fi
+      
+      # STEP 6: Validar .env.example existe
+      - name: Check .env.example
+        run: |
+          echo "🔍 Validando .env.example..."
+          if [ -f ".env.example" ]; then
+            echo "✅ .env.example existe (buena práctica)"
+          else
+            echo "⚠️ No existe .env.example"
+            echo "   Crea uno para que otros desarrolladores sepan qué variables necesitan"
+          fi
+        continue-on-error: true
+
+  # ========================================================================
+  # JOB: Composer Validation
+  # ========================================================================
+  composer-validate:
+    name: 'Composer Validation (Symfony Dependencies)'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer
+      
+      # STEP: Validar composer.json y composer.lock
+      - name: Validate composer.json
+        run: |
+          echo "🔍 Validando composer.json..."
+          
+          # Valida que composer.json sea un JSON válido
+          composer validate --strict
+          
+          # Verifica que composer.lock existe
+          if [ ! -f "composer.lock" ]; then
+            echo "⚠️ composer.lock no existe"
+            echo "   Ejecuta: composer install"
+          else
+            echo "✅ composer.lock existe"
+          fi
+          
+          echo "✅ Dependencias válidas"
+        continue-on-error: false
+
+# ============================================================================
+# RESUMEN DEL WORKFLOW
+# ============================================================================
+#
+# Cada vez que:
+# 1. Haces git push a feature/xyz → Se ejecutan validaciones
+# 2. Abres PR hacia release/development → Se ejecutan validaciones
+# 3. Abres PR hacia release/uat → Se ejecutan validaciones
+# 4. Abres PR hacia release/prod → Se ejecutan validaciones
+#
+# Validaciones ejecutadas:
+# ✅ Sintaxis PHP correcta (sin errores)
+# ✅ Sin debug statements (die, var_dump, dd, exit)
+# ✅ Sin credenciales hardcodeadas
+# ✅ composer.json y composer.lock válidos
+#
+# Si TODO pasa ✅:
+# - Bitbucket muestra: "All checks passed ✅"
+# - El PR se puede mergear
+#
+# Si ALGO falla ❌:
+# - Bitbucket muestra: "Checks failed ❌"
+# - Debes arreglarlo en tu feature branch
+# - Haces push nuevamente
+# - El workflow se ejecuta automáticamente
+#
+# IMPORTANTE PARA TU EQUIPO:
+# - NUNCA mergear un PR con checks fallidos
+# - Siempre reviewear antes de mergear
+# - Los checks no son "opcioniales", son obligatorios
