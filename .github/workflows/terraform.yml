@@ -92,7 +92,7 @@ jobs:
       
       - name: Upload Terraform Plan
         if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: tfplan
           path: month-01/terraform-basics/tfplan
@@ -140,7 +140,7 @@ jobs:
       
       - name: Upload Outputs
         if: steps.apply.outcome == 'success'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: terraform-outputs
           path: month-01/terraform-basics/outputs.txt
