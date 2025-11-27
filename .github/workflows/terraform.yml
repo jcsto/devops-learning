@@ -1,87 +1,174 @@
+# ============================================================================
+# GITHUB ACTIONS WORKFLOW: Terraform CI/CD Pipeline
+# ============================================================================
+# Este archivo define CUANDO y COMO se ejecuta Terraform automáticamente
+# Se guarda en: .github/workflows/terraform.yml
+# Se ejecuta automáticamente cuando ocurren ciertos eventos en GitHub
+
+# ============================================================================
+# SECCION 1: NOMBRE Y DESCRIPCION DEL WORKFLOW
+# ============================================================================
 name: 'Terraform CI/CD'
+# name: El nombre que aparecerá en GitHub Actions → Actions tab
+
+# ============================================================================
+# SECCION 2: EVENTOS QUE DISPARAN ESTE WORKFLOW ("on:")
+# ============================================================================
+# "on:" define CUANDO se ejecuta este workflow
+# Pueden ser: push, pull_request, schedule, manual, etc.
 
 on:
+  # Evento 1: Cuando haces git push a estas ramas
   push:
+    # Ejecutar SOLO si el push es a estas ramas
+    branches:
+      - main      # Rama principal
+      - develop   # Rama de desarrollo
+    # Ejecutar SOLO si los cambios están en estas carpetas
+    # (optimization: no ejecutar si solo cambias README)
+    paths:
+      - 'month-01/terraform-basics/**'  # Cualquier archivo en terraform-basics/
+      - '.github/workflows/terraform.yml' # Este archivo de workflow
+  
+  # Evento 2: Cuando alguien abre un Pull Request
+  pull_request:
+    # Ejecutar SOLO en PRs hacia main
     branches:
       - main
-      - develop
+    # Ejecutar SOLO si los cambios están en estas carpetas
     paths:
       - 'month-01/terraform-basics/**'
       - '.github/workflows/terraform.yml'
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'month-01/terraform-basics/**'
 
+# ============================================================================
+# SECCION 3: VARIABLES DE ENTORNO GLOBALES
+# ============================================================================
+# Estas variables están disponibles en TODOS los jobs y steps
 env:
-  AWS_REGION: us-east-1
-  TF_VERSION: 1.6.0
+  AWS_REGION: us-east-1        # Región AWS donde crear recursos
+  TF_VERSION: 1.6.0            # Versión de Terraform a usar
+  WORK_DIR: month-01/terraform-basics  # Directorio donde está el código Terraform
+
+# ============================================================================
+# SECCION 4: DEFINICION DE JOBS (tareas que ejecutar)
+# ============================================================================
+# Un workflow puede tener varios "jobs"
+# Cada job se ejecuta en una máquina virtual separada
+# Los jobs pueden ejecutarse en paralelo o secuencial (usando "needs:")
 
 jobs:
+  # ========================================================================
+  # JOB 1: terraform-plan
+  # ========================================================================
+  # Este job SIEMPRE se ejecuta (en PRs y pushes)
+  # Genera un "plan" de qué cambios hará Terraform (sin aplicarlos)
   terraform-plan:
-    name: 'Terraform Plan'
-    runs-on: ubuntu-latest
+    name: 'Terraform Plan'  # Nombre que aparece en GitHub
+    runs-on: ubuntu-latest   # Sistema operativo: Ubuntu Linux
     
+    # steps: lista de comandos que ejecutar en orden
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      # ====================================================================
+      # STEP 1: Descargar el código del repositorio
+      # ====================================================================
+      - name: Checkout code  # Nombre descriptivo del paso
+        uses: actions/checkout@v4  # Acción predefinida de GitHub
+        # Esta acción descarga tu repositorio en la máquina virtual
       
+      # ====================================================================
+      # STEP 2: Instalar Terraform
+      # ====================================================================
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
+        uses: hashicorp/setup-terraform@v2  # Acción oficial de HashiCorp
+        with:  # Parámetros de configuración
+          terraform_version: ${{ env.TF_VERSION }}  # Usa la versión definida arriba
+        # Esta acción descarga e instala la versión especificada de Terraform
       
+      # ====================================================================
+      # STEP 3: Configurar credenciales AWS
+      # ====================================================================
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v4  # Acción oficial de AWS
         with:
+          # Obtiene valores de los SECRETS que configuraste en GitHub
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
+        # Después de este paso, AWS CLI y Terraform pueden acceder a tu cuenta AWS
       
+      # ====================================================================
+      # STEP 4: Validar formato de Terraform (terraform fmt)
+      # ====================================================================
       - name: Terraform Format Check
-        id: fmt
+        id: fmt  # ID para referenciar este step después
         run: |
-          cd month-01/terraform-basics
-          terraform fmt -check -recursive
-        continue-on-error: true
+          cd ${{ env.WORK_DIR }}  # Cambiar al directorio de Terraform
+          terraform fmt -check -recursive  # Verifica que el código esté bien formateado
+        continue-on-error: true  # Si falla, continúa sin detener el workflow
+        # terraform fmt: asegura que el código siga el estilo de AWS
+        # -check: solo verifica, no modifica archivos
+        # -recursive: revisa todas las subcarpetas (modules/)
       
+      # ====================================================================
+      # STEP 5: Inicializar Terraform (terraform init)
+      # ====================================================================
       - name: Terraform Init
         id: init
         run: |
-          cd month-01/terraform-basics
-          terraform init -backend=false
+          cd ${{ env.WORK_DIR }}
+          terraform init -backend=false  # Inicializa sin usar backend remoto
+        # terraform init: descarga providers (AWS, etc) y módulos
+        # -backend=false: no usa S3 para tfstate (local para CI/CD)
       
+      # ====================================================================
+      # STEP 6: Validar sintaxis de Terraform (terraform validate)
+      # ====================================================================
       - name: Terraform Validate
         id: validate
         run: |
-          cd month-01/terraform-basics
-          terraform validate
+          cd ${{ env.WORK_DIR }}
+          terraform validate  # Verifica que la sintaxis sea correcta
+        # terraform validate: asegura que no hay errores de sintaxis
       
+      # ====================================================================
+      # STEP 7: Generar plan de Terraform (terraform plan)
+      # ====================================================================
+      # IMPORTANTE: Este es el paso más crítico
+      # Muestra exactamente QUÉ cambios hará Terraform SIN aplicarlos
       - name: Terraform Plan
         id: plan
         run: |
-          cd month-01/terraform-basics
+          cd ${{ env.WORK_DIR }}
+          # Genera el plan y lo guarda en un archivo binario
           terraform plan -no-color -out=tfplan
         continue-on-error: true
+        # -no-color: output sin colores (mejor para CI/CD)
+        # -out=tfplan: guarda el plan en archivo para usarlo después
       
+      # ====================================================================
+      # STEP 8: Comentar el plan en la PR (solo en Pull Requests)
+      # ====================================================================
       - name: Comment PR with Plan
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request'  # Solo si es un PR
         uses: actions/github-script@v7
         with:
           script: |
+            # Script de JavaScript que corre en GitHub
+            # Obtiene el contenido del plan
             const fs = require('fs');
-            const plan = fs.readFileSync('month-01/terraform-basics/tfplan', 'utf8');
+            const plan = fs.readFileSync('${{ env.WORK_DIR }}/tfplan', 'utf8');
             
-            const comment = `## Terraform Plan
+            # Crea un comentario para la PR con el plan
+            const comment = `## 📋 Terraform Plan
             
             \`\`\`
             ${plan.substring(0, 2000)}
             \`\`\`
             
-            **Plan Status**: ${{ steps.plan.outcome }}
+            **Estado del Plan**: ${{ steps.plan.outcome }}
             `;
             
+            # Publica el comentario en la PR
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
@@ -89,29 +176,56 @@ jobs:
               body: comment
             });
         continue-on-error: true
+        # Si falla, no detiene el workflow
       
+      # ====================================================================
+      # STEP 9: Guardar el plan como artifact
+      # ====================================================================
+      # Los artifacts son archivos que se pueden descargar después
       - name: Upload Terraform Plan
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request'  # Solo en PRs
         uses: actions/upload-artifact@v4
         with:
-          name: tfplan
-          path: month-01/terraform-basics/tfplan
+          name: tfplan          # Nombre del artifact
+          path: ${{ env.WORK_DIR }}/tfplan  # Archivo a guardar
+        # Permite descargar el plan desde la interfaz de GitHub
 
+  # ========================================================================
+  # JOB 2: terraform-apply
+  # ========================================================================
+  # Este job SOLO se ejecuta en pushes a main (no en PRs)
+  # Aplica los cambios que fueron aprobados
   terraform-apply:
     name: 'Terraform Apply'
     runs-on: ubuntu-latest
+    
+    # IMPORTANTE: Este job depende de terraform-plan
+    # No se ejecuta si terraform-plan falló
     needs: terraform-plan
+    
+    # Condiciones para ejecutar este job:
+    # 1. El push es a la rama main (git push)
+    # 2. NO es un Pull Request (es un push directo)
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     
     steps:
+      # ====================================================================
+      # STEP 1: Descargar código
+      # ====================================================================
       - name: Checkout code
         uses: actions/checkout@v4
       
+      # ====================================================================
+      # STEP 2: Instalar Terraform
+      # ====================================================================
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: ${{ env.TF_VERSION }}
       
+      # ====================================================================
+      # STEP 3: Configurar credenciales AWS
+      # ====================================================================
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -119,38 +233,61 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
       
+      # ====================================================================
+      # STEP 4: Inicializar Terraform
+      # ====================================================================
       - name: Terraform Init
         id: init
         run: |
-          cd month-01/terraform-basics
+          cd ${{ env.WORK_DIR }}
           terraform init -backend=false
       
+      # ====================================================================
+      # STEP 5: APLICAR los cambios (terraform apply)
+      # ====================================================================
+      # CRITICO: Este comando CREA/MODIFICA/ELIMINA recursos en AWS
       - name: Terraform Apply
         id: apply
         run: |
-          cd month-01/terraform-basics
+          cd ${{ env.WORK_DIR }}
+          # -auto-approve: no pide confirmación (para CI/CD)
+          # En production, deberías usar aprobación manual
           terraform apply -auto-approve -no-color
         continue-on-error: true
+        # Si falla, no detiene los siguientes steps (para poder notificar)
       
+      # ====================================================================
+      # STEP 6: Guardar outputs de Terraform
+      # ====================================================================
       - name: Terraform Output
-        if: steps.apply.outcome == 'success'
+        if: steps.apply.outcome == 'success'  # Solo si el apply fue exitoso
         run: |
-          cd month-01/terraform-basics
+          cd ${{ env.WORK_DIR }}
           terraform output > outputs.txt
+        # Guarda todos los outputs (vpc_id, alb_dns_name, etc)
       
+      # ====================================================================
+      # STEP 7: Guardar outputs como artifact
+      # ====================================================================
       - name: Upload Outputs
         if: steps.apply.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: terraform-outputs
-          path: month-01/terraform-basics/outputs.txt
+          path: ${{ env.WORK_DIR }}/outputs.txt
       
+      # ====================================================================
+      # STEP 8: Notificar éxito
+      # ====================================================================
       - name: Notify Success
         if: steps.apply.outcome == 'success'
-        run: echo "✅ Terraform apply completed successfully"
+        run: echo "✅ Terraform apply completado exitosamente"
       
+      # ====================================================================
+      # STEP 9: Notificar fallo
+      # ====================================================================
       - name: Notify Failure
-        if: steps.apply.outcome == 'failure'
+        if: steps.apply.outcome == 'failure'  # Si el apply falló
         run: |
-          echo "❌ Terraform apply failed"
-          exit 1
+          echo "❌ Terraform apply falló"
+          exit 1  # Marca el workflow como fallido
