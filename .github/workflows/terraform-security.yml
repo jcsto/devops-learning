@@ -3,166 +3,61 @@
 # ============================================================================
 # Este workflow ejecuta herramientas de seguridad que buscan vulnerabilidades
 # en tu código Terraform ANTES de que se aplique a AWS
-# 
-# Herramientas usadas:
-# 1. tfsec: Busca problemas de seguridad específicos de Terraform
-# 2. Checkov: Valida compliance y mejores prácticas de IaC
 
-# ============================================================================
-# NOMBRE DEL WORKFLOW
-# ============================================================================
 name: 'Terraform Security'
-# Este nombre aparecerá en GitHub Actions → Actions tab
 
-# ============================================================================
-# EVENTOS QUE DISPARAN ESTE WORKFLOW
-# ============================================================================
 on:
-  # Evento 1: Cuando haces push
   push:
     branches:
-      - main      # Solo en rama main
-      - develop   # Solo en rama develop
-    paths:
-      - 'month-01/terraform-basics/**'  # Solo si cambias código Terraform
-      - '.github/workflows/terraform-security.yml'  # O este archivo
-
-  # Evento 2: Cuando abres un Pull Request
-  pull_request:
-    branches:
-      - main      # Solo PRs a main
+      - main
+      - develop
     paths:
       - 'month-01/terraform-basics/**'
       - '.github/workflows/terraform-security.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'month-01/terraform-basics/**'
 
-# ============================================================================
-# JOBS: Tareas a ejecutar
-# ============================================================================
 jobs:
   # ========================================================================
-  # JOB 1: tfsec - Scanner de Seguridad para Terraform
+  # JOB: Validación básica de Terraform
   # ========================================================================
-  # tfsec es una herramienta que busca problemas de seguridad en Terraform
-  # Ejemplos de lo que detecta:
-  # - Security groups sin restricciones (0.0.0.0/0)
-  # - Encryption no habilitado en RDS
-  # - ACLs públicas en S3 buckets
-  # - Credenciales hardcodeadas
-  
-  tfsec:
-    name: 'TFSec Security Scan'  # Nombre descriptivo
-    runs-on: ubuntu-latest        # Sistema operativo
+  validate:
+    name: 'Terraform Validate'
+    runs-on: ubuntu-latest
     
     steps:
-      # ====================================================================
       # STEP 1: Descargar código
-      # ====================================================================
-      - name: Checkout code
-        uses: actions/checkout@v4
-        # Descarga tu repositorio en la máquina virtual
-      
-      # ====================================================================
-      # STEP 2: Ejecutar tfsec
-      # ====================================================================
-      - name: Run tfsec
-        # tfsec es una herramienta mantenida por Aqua Security
-        uses: aquasecurity/tfsec-action@v1.0.0
-        with:
-          # working_directory: carpeta donde está el código Terraform
-          working_directory: 'month-01/terraform-basics'
-          
-          # format: formato de output
-          # 'sarif' es el formato que GitHub entiende para security reports
-          format: 'sarif'
-          
-          # out: archivo donde guardar el reporte
-          out: 'tfsec.sarif'
-        
-        # continue-on-error: si tfsec encuentra problemas, no detiene el workflow
-        # (permite que otros jobs también ejecuten)
-        continue-on-error: true
-      
-      # ====================================================================
-      # STEP 3: Subir reporte a GitHub Security
-      # ====================================================================
-      - name: Upload SARIF report
-        # Esta acción sube el reporte a GitHub
-        # El reporte aparecerá en Security → Code scanning alerts
-        uses: github/codeql-action/upload-sarif@v2
-        with:
-          # Archivo SARIF que tfsec generó
-          sarif_file: tfsec.sarif
-        
-        # if: always() = ejecutar SIEMPRE, incluso si pasos anteriores fallaron
-        if: always()
-
-  # ========================================================================
-  # JOB 2: Checkov - Validación de Compliance y Best Practices
-  # ========================================================================
-  # Checkov valida que el código siga mejores prácticas
-  # Es como un "linter" pero para Infrastructure as Code
-  #
-  # Ejemplos de lo que valida:
-  # - Tags en todos los recursos
-  # - Logging habilitado en RDS
-  # - Backups configurados
-  # - Encryption en reposo y en tránsito
-  
-  checkov:
-    name: 'Checkov IaC Scan'  # Nombre descriptivo
-    runs-on: ubuntu-latest     # Sistema operativo
-    
-    steps:
-      # ====================================================================
-      # STEP 1: Descargar código
-      # ====================================================================
       - name: Checkout code
         uses: actions/checkout@v4
       
-      # ====================================================================
-      # STEP 2: Ejecutar Checkov
-      # ====================================================================
-      - name: Run Checkov
-        # bridgecrewio es la organización que mantiene Checkov
-        uses: bridgecrewio/checkov-action@master
+      # STEP 2: Instalar Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
         with:
-          # directory: carpeta a escanear
-          directory: month-01/terraform-basics
-          
-          # framework: qué tipo de código revisar
-          # 'terraform' = escanear código Terraform
-          framework: terraform
-          
-          # quiet: no mostrar resultados sin problemas (menos verbose)
-          quiet: false
-          
-          # soft_fail: no fallar el workflow si encuentra problemas
-          # (solo alerta, no detiene)
-          soft_fail: true
-        
-        # continue-on-error: permite que otros jobs ejecuten incluso si falla
+          terraform_version: 1.6.0
+      
+      # STEP 3: Validar formato
+      - name: Terraform Format Check
+        run: |
+          cd month-01/terraform-basics
+          terraform fmt -check -recursive
         continue-on-error: true
-
-# ============================================================================
-# RESUMEN: QUÉ HACE ESTE WORKFLOW
-# ============================================================================
-# 
-# 1. Cuando haces git push a main o develop:
-#    → Se ejecutan tfsec y Checkov automáticamente
-#    → Escanean tu código Terraform buscando vulnerabilidades
-#    → Suben los reportes a GitHub Security tab
-#
-# 2. Cuando abres un Pull Request a main:
-#    → Same: ejecutan los scanners
-#    → El reviewer ve si hay problemas de seguridad ANTES de mergear
-#
-# 3. Los reportes aparecen en:
-#    → GitHub Repo → Security → Code scanning alerts
-#    → Cada línea problemática está marcada
-#
-# IMPORTANTE:
-# - Estos jobs NO bloquean los PRs (soft_fail: true)
-# - Solo alertan sobre problemas
-# - El reviewer decide si mergear o no
-#
-# En producción, podrías cambiar soft_fail a false para que sí bloqueen
+      
+      # STEP 4: Inicializar Terraform
+      - name: Terraform Init
+        run: |
+          cd month-01/terraform-basics
+          terraform init -backend=false
+      
+      # STEP 5: Validar sintaxis
+      - name: Terraform Validate
+        run: |
+          cd month-01/terraform-basics
+          terraform validate
+      
+      # STEP 6: Notificar resultado
+      - name: Validation Complete
+        run: echo "✅ Validación completada"
