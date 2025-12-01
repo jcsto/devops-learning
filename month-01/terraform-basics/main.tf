@@ -117,3 +117,16 @@ module "disaster_recovery" {
 
   depends_on = [module.rds]
 }
+
+module "security" {
+  source = "./modules/security"
+
+  environment   = var.environment
+  project_name  = var.project_name
+  vpc_id        = module.vpc.vpc_id
+  rds_endpoint  = "devops-platform-db-20251126040314138900000001.c6xtsg8szpz6.us-east-1.rds.amazonaws.com"
+
+  tags = var.tags
+
+  depends_on = [module.vpc]
+}

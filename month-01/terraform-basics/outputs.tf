@@ -91,3 +91,19 @@ output "backup_retention_days" {
   description = "Automated backup retention period"
   value       = try(module.disaster_recovery.backup_retention_days, 0)
 }
+
+# Security Outputs
+output "kms_key_id" {
+  description = "KMS Key for encryption"
+  value       = try(module.security.kms_key_id, "N/A")
+}
+
+output "cloudtrail_arn" {
+  description = "CloudTrail ARN"
+  value       = try(module.security.cloudtrail_arn, "N/A")
+}
+
+output "log_group_name" {
+  description = "Application Log Group"
+  value       = try(module.security.log_group_name, "N/A")
+}
