@@ -1,0 +1,70 @@
+================================================================================
+DISASTER RECOVERY SLA (Service Level Agreement)
+================================================================================
+
+Project: devops-platform
+Environment: dev
+Generated: $(date)
+
+================================================================================
+RECOVERY TIME OBJECTIVE (RTO) - ¿Cuánto tarda en recuperarse?
+================================================================================
+
+Escenario: Falla de AZ (Availability Zone)
+RTO: ~2-5 minutos (Multi-AZ automático failover)
+
+Escenario: Corrupción de datos
+RTO: ~15-30 minutos (restaurar desde backup)
+
+Escenario: Toda la región falla
+RTO: ~1-2 horas (manual - requiere provisionar en nueva región)
+
+================================================================================
+RECOVERY POINT OBJECTIVE (RPO) - ¿Cuántos datos se pierden?
+================================================================================
+
+Backups automáticos: Cada 03:00-04:00 UTC
+RPO: ~1 hora (máximo entre backup y falla)
+
+Multi-AZ Standby: Replicación síncrona
+RPO: ~0 minutos (copia en tiempo real)
+
+================================================================================
+CURRENT CONFIGURATION
+================================================================================
+
+✅ Multi-AZ Enabled: true
+✅ Backup Retention: 7 días
+✅ Backup Window: 03:00-04:00 UTC
+✅ Automatic Minor Upgrades: true
+✅ Deletion Protection: true
+✅ Copy Tags to Snapshot: true
+
+================================================================================
+TESTING SCHEDULE
+================================================================================
+
+Monthly:
+- Review backup status
+- Verify Multi-AZ is active
+- Check CloudWatch alarms
+
+Quarterly:
+- Force manual failover test
+- Restore from backup to test instance
+- Verify application reconnection
+
+Annually:
+- Full disaster recovery drill
+- Document lessons learned
+- Update this runbook
+
+================================================================================
+CONTACT INFORMATION
+================================================================================
+
+On-call Engineer: [YOUR_NAME]
+AWS Support Level: Business (or Enterprise)
+Support Case URL: https://console.aws.amazon.com/support/
+
+================================================================================

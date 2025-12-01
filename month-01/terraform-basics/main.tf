@@ -98,3 +98,22 @@ module "monitoring" {
 
   depends_on = [module.alb, module.ec2]
 }
+
+module "disaster_recovery" {
+  source = "./modules/disaster-recovery"
+
+  environment                                   = var.environment
+  project_name                                  = var.project_name
+  db_instance_id                                = "devops-platform-db-20251126040314138900000001"
+  backup_retention_days                         = 7
+  backup_window                                 = "03:00-04:00"
+  multi_az_enabled                              = true
+  enable_automated_minor_version_upgrade        = true
+  preferred_maintenance_window                  = "mon:04:00-mon:05:00"
+  copy_tags_to_snapshot                         = true
+  enable_deletion_protection                    = true
+
+  tags = var.tags
+
+  depends_on = [module.rds]
+}

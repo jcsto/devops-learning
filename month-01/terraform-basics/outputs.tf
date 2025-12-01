@@ -75,3 +75,19 @@ output "alarms_created" {
   description = "Number of CloudWatch alarms created"
   value       = module.monitoring.alarms_created
 }
+
+# Disaster Recovery Outputs
+output "dr_runbook_path" {
+  description = "Path to Disaster Recovery Runbook"
+  value       = try(module.disaster_recovery.dr_runbook_path, "N/A - RDS module required")
+}
+
+output "multi_az_enabled" {
+  description = "RDS Multi-AZ failover status"
+  value       = try(module.disaster_recovery.multi_az_enabled, "N/A")
+}
+
+output "backup_retention_days" {
+  description = "Automated backup retention period"
+  value       = try(module.disaster_recovery.backup_retention_days, 0)
+}
