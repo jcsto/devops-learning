@@ -1,3 +1,7 @@
+# ============================================================================
+# OUTPUTS GLOBALES - RAÍZ DEL PROYECTO
+# ============================================================================
+
 # VPC Outputs
 output "vpc_id" {
   description = "The ID of the VPC"
@@ -22,32 +26,6 @@ output "private_subnet_ids" {
 output "nat_gateway_public_ips" {
   description = "List of public IPs of NAT Gateways"
   value       = module.vpc.nat_gateway_public_ips
-}
-
-output "availability_zones" {
-  description = "List of availability zones used"
-  value       = module.vpc.availability_zones
-}
-
-# Security Groups Outputs
-output "alb_security_group_id" {
-  description = "ALB Security Group ID"
-  value       = module.security_groups.alb_security_group_id
-}
-
-output "ec2_security_group_id" {
-  description = "EC2 Security Group ID"
-  value       = module.security_groups.ec2_security_group_id
-}
-
-output "rds_security_group_id" {
-  description = "RDS Security Group ID"
-  value       = module.security_groups.rds_security_group_id
-}
-
-output "lambda_security_group_id" {
-  description = "Lambda Security Group ID"
-  value       = module.security_groups.lambda_security_group_id
 }
 
 # ALB Outputs
@@ -87,24 +65,13 @@ output "ami_id" {
   value       = module.ec2.ami_id
 }
 
-# RDS Outputs
-output "db_instance_endpoint" {
-  description = "RDS Database endpoint"
-  value       = module.rds.db_instance_endpoint
+# Monitoring Outputs
+output "dashboard_url" {
+  description = "CloudWatch Dashboard URL"
+  value       = module.monitoring.dashboard_url
 }
 
-output "db_instance_address" {
-  description = "RDS Database address"
-  value       = module.rds.db_instance_address
+output "alarms_created" {
+  description = "Number of CloudWatch alarms created"
+  value       = module.monitoring.alarms_created
 }
-
-output "db_instance_port" {
-  description = "RDS Database port"
-  value       = module.rds.db_instance_port
-}
-
-output "db_name" {
-  description = "RDS Database name"
-  value       = module.rds.db_name
-}
-

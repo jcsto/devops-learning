@@ -81,3 +81,20 @@ module "rds" {
   depends_on = [module.security_groups]
 }
 
+
+module "monitoring" {
+  source = "./modules/monitoring"
+
+  environment       = var.environment
+  project_name      = var.project_name
+  alb_name          = module.alb.alb_dns_name
+  asg_name          = module.ec2.asg_name
+  db_instance_id    = "devops-platform-db-20251126040314138900000001"  # Del tfstate
+  
+  # Opcional: email para alertas
+  alarm_email       = ""
+  
+  tags = var.tags
+
+  depends_on = [module.alb, module.ec2]
+}
