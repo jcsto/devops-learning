@@ -1,18 +1,25 @@
-# Month 01 - [Topic Name]
+# Hello AWS - DevOps Learning Project
 
-## 🎯 Objetivo
-[Describe el objetivo de este mes]
+Production-ready AWS infrastructure with Terraform.
 
-## 📚 Contenido
-- [ ] Concepto 1
-- [ ] Concepto 2
-- [ ] Concepto 3
+## Architecture
+- VPC with public/private subnets (2 AZs)
+- ALB + EC2 Auto Scaling (2-4 instances)
+- RDS PostgreSQL Multi-AZ
+- CloudWatch Monitoring
+- Disaster Recovery
 
-## 🚀 Proyectos
-1. Proyecto 1.1
-2. Proyecto 1.2
+## Quick Start
+```bash
+cd terraform-basics
+terraform init
+terraform apply
+```
 
-## 📊 Resultados
-[Agrega resultados aquí]
+## Key Features
+✅ Infrastructure as Code (Terraform)
+✅ CI/CD Pipeline (GitHub Actions)
+✅ Multi-AZ High Availability
+✅ CloudWatch Monitoring & Alarms
+✅ Automated Backups & Failover
 
-## ✅ Status: TODO
